@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://docs.gorgojs.ru/medusa-integrations/1c-enterprise">
+  <a href="https://docs.gorgojs.ru/medusa-integrations/1c-enterprise-catalog">
     <img alt="Medusa-1C logo" src="https://raw.githubusercontent.com/gorgojs/medusa-integrations/refs/heads/main/assets/1c-medusa-logo.svg" width="270">
   </a>
 </p>
@@ -9,7 +9,7 @@
 </h1>
 
 <p align="center">
-  <a href="https://docs.gorgojs.ru/medusa-integrations/1c-enterprise">Документация</a>
+  <a href="https://docs.gorgojs.ru/medusa-integrations/1c-enterprise-catalog">Документация</a>
   <br/>
   Импорт товаров, категорий и цен из ERP 1С:Предприятие в Medusa.
   <br/>
@@ -81,7 +81,7 @@ npm install @gorgo/medusa-integration @gorgo/medusa-1c
 
 ## Документация
 
-Полное руководство по установке, настройке и использованию плагина доступно на [сайте документации Gorgo](https://docs.gorgojs.ru/medusa-integrations/1c-enterprise).
+Полное руководство по установке, настройке и использованию плагина доступно на [сайте документации Gorgo](https://docs.gorgojs.ru/medusa-integrations/1c-enterprise-catalog).
 
 ## Лицензия
 

@@ -32,5 +32,5 @@ export type OffersOutput = {
 };
 
 export const ProviderKeys = {
-  ONEC: "1c",
+  ONEC: "1c-catalog",
 }
