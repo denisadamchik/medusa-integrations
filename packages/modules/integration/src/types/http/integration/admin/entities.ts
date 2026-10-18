@@ -49,7 +49,8 @@ export interface CatalogIntegration {
   authorLocalized: string
   label: string
   shortDescription: string
-  repository: string
+  /** Public source repository. A paid integration has none, its source is private. */
+  repository?: string
   /** Dropped at the catalog boundary unless it is an absolute https URL — see `isSafeHref`. */
   docsUrl?: string
   /**

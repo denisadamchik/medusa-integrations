@@ -69,7 +69,7 @@ SVG. `yarn catalog:gen` warns by name about every icon it had to skip.
 | `author` | yes | Author `id` from [`authors.yml`](authors.yml) — Gorgo vs. community reads off this, there's no separate `official` flag |
 | `displayName` | yes | `{ en, ru }` — card title |
 | `icon` | yes | Filename under `icons/` |
-| `repository` | yes | `https://…` |
+| `repository` | no | `https://…`, left out for a paid integration, whose source is private |
 | `shortDescription` | no | `{ en, ru }` — card subtitle (≤ 160 chars) |
 | `docsUrl` | no | `https://…` |
 | `docsSnippet` | no | `{ en, ru }` — markdown-инструкция для Admin setup drawer (ограниченный подсет, ≤ 8000 символов на язык) |

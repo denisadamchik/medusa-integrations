@@ -33,7 +33,7 @@ shortDescription:
 # Icon filename under catalog/icons/. Square SVG (preferred) or PNG, <= 50 KB, no remote refs.
 icon: "example.svg"
 
-# Source repository.
+# Source repository (optional). Leave it out for a paid integration, whose source is private.
 repository: "https://github.com/your-org/your-repo"
 
 # Docs entry (optional).

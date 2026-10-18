@@ -5,7 +5,7 @@
   "description": "One integration configurable through @gorgo/medusa-integration. One file per integration at catalog/integrations/<identifier>.yml.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["identifier", "npm", "category", "author", "displayName", "icon", "repository"],
+  "required": ["identifier", "npm", "category", "author", "displayName", "icon"],
   "properties": {
     "identifier": {
       "type": "string",
@@ -42,7 +42,8 @@
     },
     "repository": {
       "type": "string",
-      "pattern": "^https://"
+      "pattern": "^https://",
+      "description": "Public source repository. Leave it out for a paid integration, whose source is private."
     },
     "docsUrl": {
       "type": "string",
