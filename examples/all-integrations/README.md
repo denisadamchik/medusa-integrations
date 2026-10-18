@@ -62,7 +62,7 @@ run everything from `apps/backend`.
    [YooKassa](https://docs.gorgojs.com/medusa-integrations/yookassa/settings),
    [Robokassa](https://docs.gorgojs.com/medusa-integrations/robokassa/settings),
    [ApiShip](https://docs.gorgojs.com/medusa-integrations/apiship/settings),
-   [1C](https://docs.gorgojs.com/medusa-integrations/1c-enterprise/settings).
+   [1C](https://docs.gorgojs.com/medusa-integrations/1c-enterprise-catalog/settings).
 
 2. The seed already lists T-Kassa, YooKassa and Robokassa among the payment providers of all 241
    regions, so nothing to do there. A region you add by hand needs them too, under

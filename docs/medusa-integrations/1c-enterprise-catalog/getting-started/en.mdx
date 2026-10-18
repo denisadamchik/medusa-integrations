@@ -1,21 +1,21 @@
 ---
-title: "Начало работы с 1С:Предприятие для Medusa"
-description: "В этой документации вы узнаете, как установить и настроить плагин интеграции 1С:Предприятие для Medusa."
+title: "Getting Started with 1C:Enterprise Catalog for Medusa"
+description: "In this document, you'll learn how to install and configure the 1C:Enterprise Catalog integration plugin for Medusa."
 ---
 
 # {frontmatter.title}
 
-В этой документации вы узнаете, как установить и настроить плагин интеграции 1C:Enterprise для Medusa.
+In this document, you'll learn how to install and configure the 1C:Enterprise Catalog integration plugin for Medusa.
 
-## Требования
+## Prerequisites
 
-- Medusa v2.17.2 или новее
-- Node.js v20 или новее
-- [Модуль интеграций](/medusa-modules/integration)
+- Medusa server v2.17.2 or later
+- Node.js v20 or later
+- [Integration Module](/medusa-modules/integration)
 
 ---
 
-## Установка
+## Installation
 
 <CodeTabs>
   <CodeTab label="yarn" value="yarn">
@@ -32,9 +32,9 @@ description: "В этой документации вы узнаете, как �
 
 ---
 
-## Настройка
+## Configuration
 
-Добавьте конфигурацию плагина в `medusa-config.js` вашего приложения Medusa:
+Add the plugin configuration in your `medusa-config.js` file of the Medusa admin application:
 
 ```ts title="medusa-config.js"
 # ...
@@ -87,4 +87,4 @@ INTEGRATION_ENCRYPTION_KEY=supersecret
   ]}
 />
 
-<Note>🚧 Интеграция в настоящее время находится в разработке.</Note>
+<Note>🚧 Integration is currently under development.</Note>
