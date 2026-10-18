@@ -19,6 +19,10 @@ icon: "1c.svg"
 docsUrl: "https://docs.gorgojs.com/medusa-integrations/1c-enterprise"
 docsSnippet:
   en: |
+    ## Get Access
+
+    The plugin is available to beta participants and is published to Gorgo's private package registry. To install it, [apply for the beta](https://gorgojs.com/beta/medusa-1c). Once your application is approved, you get an access token for the registry.
+
     ## Install
 
     ```bash
@@ -65,6 +69,10 @@ docsSnippet:
     1. Open **Settings → Integrations → 1C:Enterprise**.
     2. Configure integration settings.
   ru: |
+    ## Получение доступа
+
+    Плагин доступен участникам бета-тестирования и публикуется в закрытом реестре пакетов Gorgo. Чтобы установить его, [подайте заявку на бету](https://gorgojs.ru/beta/medusa-1c). После одобрения заявки вы получите токен доступа к реестру.
+
     ## Установка
 
     ```bash
