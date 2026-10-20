@@ -25,7 +25,7 @@ description: "Узнайте, как установить плагин 1С:Пр�
 
 ## Установка
 
-Пакеты `@gorgo-store` опубликованы не в общем реестре npm, а в реестре `registry.gorgojs.com`. Укажите менеджеру пакетов этот реестр для пакетов `@gorgo-store` и передайте ему лицензионный ключ. Yarn 2 и новее читает настройки из `.yarnrc.yml`, npm из `.npmrc`:
+Пакеты `@gorgo-store` опубликованы не в общем реестре npm, а в реестре `registry.gorgojs.com`. Укажите менеджеру пакетов этот реестр для пакетов `@gorgo-store` и передайте ему лицензионный ключ. Yarn 2 и новее читает настройки из `.yarnrc.yml`, npm и pnpm из `.npmrc`:
 
 <CodeTabs>
   <CodeTab label="yarn" value="yarn">
@@ -36,6 +36,11 @@ description: "Узнайте, как установить плагин 1С:Пр�
         npmAuthToken: "${GORGO_LICENSE}"
     ```
   </CodeTab>
+  <CodeTab label="pnpm" value="pnpm">
+    ```text title=".npmrc"
+    @gorgo-store:registry=https://registry.gorgojs.com/
+    ```
+  </CodeTab>
   <CodeTab label="npm" value="npm">
     ```text title=".npmrc"
     @gorgo-store:registry=https://registry.gorgojs.com/
@@ -44,7 +49,15 @@ description: "Узнайте, как установить плагин 1С:Пр�
   </CodeTab>
 </CodeTabs>
 
-Оба файла берут лицензионный ключ из переменной окружения `GORGO_LICENSE`, поэтому сам ключ не попадает в репозиторий проекта. Задайте эту переменную на своей машине и в CI, то есть везде, где устанавливаются зависимости.
+Для Yarn и npm ключ берётся из переменной окружения `GORGO_LICENSE`, поэтому сам ключ не попадает в репозиторий проекта. Задайте эту переменную на своей машине и в CI, то есть везде, где устанавливаются зависимости.
+
+Начиная с версии 11.5.3, pnpm не подставляет переменные окружения в адреса реестров и ключи из `.npmrc` проекта. Поэтому в `.npmrc` для pnpm указан только адрес реестра, а ключ сохраните в пользовательских настройках pnpm. Выполните эту команду на своей машине и в CI до установки зависимостей:
+
+```bash
+pnpm config set //registry.gorgojs.com/:_authToken "$GORGO_LICENSE"
+```
+
+Команда записывает ключ в настройки pnpm вашего пользователя, а не в проект, так что в репозиторий он тоже не попадает.
 
 Установите плагин вместе с Модулем интеграций:
 
@@ -52,6 +65,11 @@ description: "Узнайте, как установить плагин 1С:Пр�
   <CodeTab label="yarn" value="yarn">
     ```bash
     yarn add @gorgo/medusa-integration @gorgo-store/medusa-erp-1c
+    ```
+  </CodeTab>
+  <CodeTab label="pnpm" value="pnpm">
+    ```bash
+    pnpm add @gorgo/medusa-integration @gorgo-store/medusa-erp-1c
     ```
   </CodeTab>
   <CodeTab label="npm" value="npm">
@@ -114,6 +132,11 @@ module.exports = defineConfig({
   <CodeTab label="yarn" value="yarn">
     ```bash
     yarn medusa db:migrate
+    ```
+  </CodeTab>
+  <CodeTab label="pnpm" value="pnpm">
+    ```bash
+    pnpm medusa db:migrate
     ```
   </CodeTab>
   <CodeTab label="npx" value="npx">
