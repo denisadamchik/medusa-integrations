@@ -73,7 +73,7 @@ The handler receives the batch's products and the classifier properties:
   ]}
 />
 
-The exchange fills `title`, `description`, `handle`, `external_id`, `type_id`, `status`, `metadata`, `category_ids` and `sales_channels` in `product`, and `thumbnail` and `images` only when 1C sent images. It doesn't fill `subtitle`, `weight`, `length`, `height`, `width`, `origin_country`, `hs_code`, `mid_code`, `material`, `collection_id` and `discountable`, but a handler can set them, and the import writes them like the rest.
+The exchange fills `title`, `description`, `external_id`, `type_id`, `status`, `metadata`, `category_ids` and `sales_channels` in `product`, and `thumbnail` and `images` only when 1C sent images. A new product has `handle`, and an existing one has it only when [Update the handle when a product is renamed](/medusa-integrations/1c-enterprise/settings#edit-the-exchange-rules) is on and the name changed in 1C. The exchange sets `status` to `published` on every product, including one unpublished by hand. To keep some products as drafts, set `status` in the handler, as in the [Draft for Products Hidden on the Site](/medusa-integrations/1c-enterprise/hooks/examples#draft-for-products-hidden-on-the-site) example. It doesn't fill `subtitle`, `weight`, `length`, `height`, `width`, `origin_country`, `hs_code`, `mid_code`, `material`, `collection_id` and `discountable`, but a handler can set them, and the import writes them like the rest.
 
 Return `new StepResponse({ products })`. The handler may edit `product` and remove products from the batch. It can't:
 
@@ -83,6 +83,146 @@ Return `new StepResponse({ products })`. The handler may edit `product` and remo
 - change `external_id` and `metadata.onec.id` of an existing product. Deleting these keys is allowed, and the fields then stay as they are.
 
 After the hook, the plugin compares `product` with `existing` and writes only the fields that differ. The plugin creates a product that has no `existing`. A product removed from the batch is neither created nor updated in this exchange.
+
+---
+
+## setVariants
+
+A hook of the `importOnecVariantsWorkflow` workflow (`import-onec-variants`). The workflow runs inside the offers import, so the hook is called on every offers batch (up to 100 products with all their offers). It runs after the plugin has matched the offers to Medusa variants and decided their SKUs, and before the comparison with Medusa.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products, properties }, { container }) => {
+  // ...
+
+  return new StepResponse({ products })
+})
+```
+
+The handler receives the batch's products that already exist in Medusa, along with the offers package properties. The plugin skips the offers of a product that isn't in Medusa yet before calling the hook:
+
+<MedusaTypeList
+  sectionTitle="SetVariantsToImportInput"
+  types={[
+    {
+      name: "products",
+      type: "ProductVariantsToImport[]",
+      description: "The batch's products, one element per product. An element covers the whole product, because Medusa deletes a variant missing from the set it receives.",
+      optional: false,
+      expandable: false,
+      children: [
+        {
+          name: "source",
+          type: "OnecOffer[]",
+          description: "All the product's offers from `offers.xml`, including the offer for the whole product, with the `id`, `name`, `article`, `characteristics`, `propertyValues`, `prices` and `stocks` fields. A characteristic offer's `id` looks like `<product Ид>#<characteristic Ид>`.",
+          optional: false,
+          expandable: false,
+          children: []
+        },
+        {
+          name: "existing",
+          type: "ProductDTO",
+          description: "The Medusa product with its current variants, their prices and its options. Don't change it.",
+          optional: false,
+          expandable: false,
+          children: []
+        },
+        {
+          name: "variants",
+          type: "DesiredVariant[]",
+          description: "The full set of variants as it should be after the import. Medusa deletes a variant that isn't here. The import doesn't change a key that a variant doesn't have.",
+          optional: false,
+          expandable: false,
+          children: [
+            {
+              name: "id",
+              type: "string",
+              description: "The ID of the Medusa variant the plugin matched the offer to. Missing for a new variant.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "title",
+              type: "string",
+              description: "The variant's title. The exchange writes the offer's name.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "sku",
+              type: "string | null",
+              description: "The offer's article, unless another variant already holds it. Otherwise `null`, and the variant is saved without a SKU.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "manage_inventory",
+              type: "boolean",
+              description: "Whether to track the variant's inventory. The exchange writes `true`.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "prices",
+              type: "DesiredPrice[]",
+              description: "The variant's retail prices, as `amount` and `currency_code` pairs. An empty list removes all of the variant's prices.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "options",
+              type: "Record<string, string>",
+              description: "Option values by option title. Missing for a variant without characteristics.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "metadata",
+              type: "Record<string, unknown>",
+              description: "The variant's metadata. `metadata.onec.id` holds the characteristic `Ид` the plugin matches the variant by, and `metadata.onec.article` holds the article from 1C.",
+              optional: true,
+              expandable: false,
+              children: []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: "properties",
+      type: "ClassifierProperty[]",
+      description: "The offers package properties. The plugin uses them to turn characteristics into options.",
+      optional: false,
+      expandable: false,
+      children: []
+    }
+  ]}
+/>
+
+The exchange doesn't fill `allow_backorder`, `barcode`, `ean` and `weight`, but a handler can set them, and the import writes them like the rest.
+
+Return `new StepResponse({ products })`. The handler may edit variants, remove variants from `variants` and remove products from the batch. It can't:
+
+- return a product that wasn't in the batch, or the same product twice;
+- return `variants` as anything but an array;
+- give a product another product's variant, or return the same variant twice;
+- change `metadata.onec.id` of an existing variant, because the next exchange matches the variant by it. Deleting the `metadata` key is allowed, and the variant's metadata then stays as it is.
+
+After the hook, the plugin derives the product's options from the resulting variants. An option with the same title as before the hook keeps its link to the 1C property and its dictionary, and a value missing from the dictionary is added to it. An option with a new title is created without a link to a property, with the values found in the variants. The plugin then compares the variants with `existing` and writes the set only when something in it changed. Medusa deletes a variant removed from `variants`. A product removed from the batch keeps its variants and options unchanged in this exchange.
+
+<Note type="warning">
+
+The plugin finds an option with a new title by that title only within one batch. In the following batches the title is already taken, and their products get a separate option instead of the shared one. So rename options in 1C, and change variant fields and values in the handler.
+
+</Note>
 
 ---
 
@@ -197,7 +337,7 @@ The handler receives one element per non-retail price type from `offers.xml`. Th
         {
           name: "prices",
           type: "PriceListPriceToImport[]",
-          description: "The prices of this type for the batch's variants, with the `variant_id`, `sku`, `amount` and `currency_code` fields. A batch variant missing from this list loses its price in the price list. An empty list leaves the price list's prices unchanged. That happens when 1C sent nothing for this price type.",
+          description: "The prices of this type for the batch's variants, with the `variant_id`, `sku`, `amount` and `currency_code` fields. `sku` is empty for a variant whose article another variant holds. A batch variant missing from this list loses its price in the price list. An empty list leaves the price list's prices unchanged. That happens when 1C sent nothing for this price type.",
           optional: false,
           expandable: false,
           children: []

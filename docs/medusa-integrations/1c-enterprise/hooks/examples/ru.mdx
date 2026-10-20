@@ -93,6 +93,35 @@ importOnecProductsWorkflow.hooks.setProducts(async ({ products }) => {
 
 ---
 
+## Черновик для скрытых от сайта товаров
+
+Обмен публикует каждый товар из выгрузки. Если в вашей базе 1С часть номенклатуры скрыта от сайта свойством, например «Удалить с сайта», без обработчика первая же выгрузка выставит эти товары на витрину. Обработчик оставляет такие товары черновиками. Обработчик не обращается к базе.
+
+```ts title="src/workflows/hooks/onec-catalog.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecProductsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+import { readProperty } from "@gorgo-store/medusa-erp-1c/hooks"
+
+const HIDDEN_ON_SITE_PROPERTY = "Удалить с сайта"
+const YES_VALUES = new Set(["true", "да"])
+
+importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }) => {
+  return new StepResponse({
+    products: products.map((item) => {
+      const hidden = readProperty(item.source, properties, HIDDEN_ON_SITE_PROPERTY).some((value) =>
+        YES_VALUES.has(value.trim().toLowerCase()),
+      )
+
+      return hidden ? { ...item, product: { ...item.product, status: "draft" } } : item
+    }),
+  })
+})
+```
+
+В типовой конфигурации 1С свойства «Удалить с сайта» нет, его заводят в конкретной базе, поэтому подставьте название своего свойства. Булево свойство 1С присылает значением `true`, а свойство со справочником значением из справочника, поэтому обработчик принимает и `true`, и «Да». Когда свойство в 1С снимут, следующий обмен снова опубликует товар.
+
+---
+
 ## Не перезаписывать правки из Medusa Admin
 
 Название и описание товара часто редактируют в Medusa Admin, а следующий обмен вернул бы значения из 1С. Обработчик удаляет эти ключи у существующих товаров, и импорт оставляет поля без изменений. Обработчик не обращается к базе.
@@ -157,6 +186,58 @@ importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }, { 
 ```
 
 Обработчик только ищет коллекции, а создаёте их вы в Medusa Admin. Товар, для бренда которого коллекции нет, остаётся без изменений. Создавать коллекции можно и из обработчика, но тогда ему нужна функция отката, как описано в [правилах для обработчиков](/medusa-integrations/1c-enterprise/hooks#как-хук-влияет-на-скорость-обмена).
+
+---
+
+## Название варианта из опций
+
+Вариант получает название предложения из 1С, например «Футболка (Красный, M)». Обработчик называет вариант значениями его опций, «Красный / M». Вариант без опций сохраняет название из 1С. Обработчик не обращается к базе.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products }) => {
+  return new StepResponse({
+    products: products.map((item) => ({
+      ...item,
+      variants: item.variants.map((variant) => {
+        const values = Object.values(variant.options ?? {})
+
+        return values.length ? { ...variant, title: values.join(" / ") } : variant
+      }),
+    })),
+  })
+})
+```
+
+Значения идут в том порядке, в котором 1С перечислила свойства предложения. Обработчик возвращает каждый вариант товара, поэтому Medusa ни один из них не удалит.
+
+---
+
+## Свой SKU при занятом артикуле
+
+В 1С у характеристик часто общий артикул номенклатуры, а SKU в Medusa уникален. Плагин записывает артикул в SKU только одному варианту, а остальные сохраняет без SKU. Обработчик даёт такому варианту SKU из артикула и начала `Ид` характеристики, например `ART-1-7a1f86c0`. Обработчик не обращается к базе.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products }) => {
+  return new StepResponse({
+    products: products.map((item) => ({
+      ...item,
+      variants: item.variants.map((variant) => {
+        const { id, article } = (variant.metadata?.onec ?? {}) as { id?: string; article?: string }
+
+        return variant.sku || !article || !id ? variant : { ...variant, sku: `${article}-${id.slice(0, 8)}` }
+      }),
+    })),
+  })
+})
+```
+
+Артикул и `Ид` характеристики плагин хранит в `metadata.onec` варианта, поэтому разбирать предложение обработчику не нужно. Уникальность нового SKU обеспечивает обработчик. Если такой SKU уже есть у другого варианта, обмен остановится с ошибкой.
 
 ---
 

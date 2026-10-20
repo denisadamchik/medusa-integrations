@@ -93,6 +93,35 @@ The exchange publishes the product on every import, so the product gets publishe
 
 ---
 
+## Draft for Products Hidden on the Site
+
+The exchange publishes every product it receives. If part of the items in your 1C database is hidden from the site with a property, for example "Удалить с сайта", the very first export puts those products on the storefront unless a handler stops it. The handler keeps such products as drafts. It doesn't query the database.
+
+```ts title="src/workflows/hooks/onec-catalog.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecProductsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+import { readProperty } from "@gorgo-store/medusa-erp-1c/hooks"
+
+const HIDDEN_ON_SITE_PROPERTY = "Удалить с сайта"
+const YES_VALUES = new Set(["true", "да"])
+
+importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }) => {
+  return new StepResponse({
+    products: products.map((item) => {
+      const hidden = readProperty(item.source, properties, HIDDEN_ON_SITE_PROPERTY).some((value) =>
+        YES_VALUES.has(value.trim().toLowerCase()),
+      )
+
+      return hidden ? { ...item, product: { ...item.product, status: "draft" } } : item
+    }),
+  })
+})
+```
+
+The standard 1C configuration has no "Удалить с сайта" property. It's added in a specific database, so put your own property's name here. 1C sends a boolean property as `true` and a dictionary property as its dictionary value, so the handler accepts both `true` and "Да". Once the property is cleared in 1C, the next exchange publishes the product again.
+
+---
+
 ## Keep Edits Made in the Medusa Admin
 
 Product titles and descriptions often get edited in the Medusa Admin, and the next exchange would bring back the values from 1C. The handler deletes these keys for existing products, and the import leaves the fields unchanged. The handler makes no database queries.
@@ -157,6 +186,58 @@ importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }, { 
 ```
 
 The handler only looks collections up, and you create them in the Medusa Admin. A product whose brand has no collection stays unchanged. A handler can create collections too, but then it needs a rollback function, as described in the [handler rules](/medusa-integrations/1c-enterprise/hooks#how-a-hook-affects-exchange-speed).
+
+---
+
+## Variant Title from Options
+
+A variant gets the name of its 1C offer, for example "Футболка (Красный, M)". The handler names the variant after its option values instead, "Красный / M". A variant without options keeps its 1C name. The handler doesn't query the database.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products }) => {
+  return new StepResponse({
+    products: products.map((item) => ({
+      ...item,
+      variants: item.variants.map((variant) => {
+        const values = Object.values(variant.options ?? {})
+
+        return values.length ? { ...variant, title: values.join(" / ") } : variant
+      }),
+    })),
+  })
+})
+```
+
+The values follow the order in which 1C listed the offer's properties. The handler returns every variant of the product, so Medusa doesn't delete any of them.
+
+---
+
+## SKU for a Taken Article
+
+In 1C, the characteristics of an item often share its article, while a SKU in Medusa is unique. The plugin writes the article to the SKU of one variant only and saves the rest without a SKU. The handler gives such a variant a SKU built from the article and the start of the characteristic `Ид`, for example `ART-1-7a1f86c0`. It doesn't query the database.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products }) => {
+  return new StepResponse({
+    products: products.map((item) => ({
+      ...item,
+      variants: item.variants.map((variant) => {
+        const { id, article } = (variant.metadata?.onec ?? {}) as { id?: string; article?: string }
+
+        return variant.sku || !article || !id ? variant : { ...variant, sku: `${article}-${id.slice(0, 8)}` }
+      }),
+    })),
+  })
+})
+```
+
+The plugin keeps the article and the characteristic `Ид` in the variant's `metadata.onec`, so the handler doesn't need to parse the offer. Making the new SKU unique is up to the handler. If another variant already has that SKU, the exchange stops with an error.
 
 ---
 

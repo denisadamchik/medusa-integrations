@@ -73,7 +73,7 @@ importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }, { 
   ]}
 />
 
-В `product` обмен записывает `title`, `description`, `handle`, `external_id`, `type_id`, `status`, `metadata`, `category_ids` и `sales_channels`, а `thumbnail` и `images` только если 1С прислала изображения. Поля `subtitle`, `weight`, `length`, `height`, `width`, `origin_country`, `hs_code`, `mid_code`, `material`, `collection_id` и `discountable` обмен не заполняет, но их может задать обработчик, и импорт запишет их наравне с остальными.
+В `product` обмен записывает `title`, `description`, `external_id`, `type_id`, `status`, `metadata`, `category_ids` и `sales_channels`, а `thumbnail` и `images` только если 1С прислала изображения. `handle` есть у нового товара, а у существующего только при включённой настройке [Обновлять ярлык при изменении названия товара](/medusa-integrations/1c-enterprise/settings#редактирование-правил-обмена), когда в 1С поменялось название. Поле `status` обмен задаёт `published` каждому товару, в том числе снятому с публикации вручную. Чтобы часть товаров оставалась черновиками, задайте `status` в обработчике, как в примере [Черновик для скрытых от сайта товаров](/medusa-integrations/1c-enterprise/hooks/examples#черновик-для-скрытых-от-сайта-товаров). Поля `subtitle`, `weight`, `length`, `height`, `width`, `origin_country`, `hs_code`, `mid_code`, `material`, `collection_id` и `discountable` обмен не заполняет, но их может задать обработчик, и импорт запишет их наравне с остальными.
 
 Верните `new StepResponse({ products })`. Обработчик может менять `product` и убирать товары из порции. Обработчик не может:
 
@@ -83,6 +83,146 @@ importOnecProductsWorkflow.hooks.setProducts(async ({ products, properties }, { 
 - поменять `external_id` и `metadata.onec.id` у существующего товара. Удалить эти ключи можно, тогда поля останутся как есть.
 
 После хука плагин сравнивает `product` с `existing` и записывает только отличающиеся поля. Товар без `existing` плагин создаёт. Товар, убранный из порции, в этом обмене не создаётся и не обновляется.
+
+---
+
+## setVariants
+
+Хук воркфлоу `importOnecVariantsWorkflow` (`import-onec-variants`). Воркфлоу запускается внутри импорта предложений, поэтому хук вызывается на каждую порцию предложений (до 100 товаров со всеми их предложениями). Он срабатывает после того, как плагин сопоставил предложения с вариантами Medusa и решил их SKU, и до сравнения с Medusa.
+
+```ts title="src/workflows/hooks/onec-variants.ts"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
+import { importOnecVariantsWorkflow } from "@gorgo-store/medusa-erp-1c/workflows"
+
+importOnecVariantsWorkflow.hooks.setVariants(async ({ products, properties }, { container }) => {
+  // ...
+
+  return new StepResponse({ products })
+})
+```
+
+Обработчик получает товары порции, которые уже есть в Medusa, и свойства пакета предложений. Предложения товара, которого в Medusa ещё нет, плагин пропускает до хука:
+
+<MedusaTypeList
+  sectionTitle="SetVariantsToImportInput"
+  types={[
+    {
+      name: "products",
+      type: "ProductVariantsToImport[]",
+      description: "Товары порции, по одному элементу на товар. Элемент описывает товар целиком, потому что Medusa удаляет вариант, которого нет в переданном наборе.",
+      optional: false,
+      expandable: false,
+      children: [
+        {
+          name: "source",
+          type: "OnecOffer[]",
+          description: "Все предложения товара из `offers.xml`, включая предложение на товар целиком, с полями `id`, `name`, `article`, `characteristics`, `propertyValues`, `prices` и `stocks`. У предложения характеристики `id` имеет вид `<Ид товара>#<Ид характеристики>`.",
+          optional: false,
+          expandable: false,
+          children: []
+        },
+        {
+          name: "existing",
+          type: "ProductDTO",
+          description: "Товар Medusa с текущими вариантами, их ценами и опциями. Менять нельзя.",
+          optional: false,
+          expandable: false,
+          children: []
+        },
+        {
+          name: "variants",
+          type: "DesiredVariant[]",
+          description: "Полный набор вариантов, каким он должен стать после импорта. Вариант, которого здесь нет, Medusa удалит. Ключ, которого нет у варианта, импорт не меняет.",
+          optional: false,
+          expandable: false,
+          children: [
+            {
+              name: "id",
+              type: "string",
+              description: "ID варианта Medusa, с которым плагин сопоставил предложение. Отсутствует у нового варианта.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "title",
+              type: "string",
+              description: "Название варианта. Обмен записывает название предложения.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "sku",
+              type: "string | null",
+              description: "Артикул предложения, если его не занял другой вариант. Иначе `null`, и вариант сохранится без SKU.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "manage_inventory",
+              type: "boolean",
+              description: "Учитывать ли остатки варианта. Обмен записывает `true`.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "prices",
+              type: "DesiredPrice[]",
+              description: "Розничные цены варианта, пары `amount` и `currency_code`. Пустой список снимает все цены варианта.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "options",
+              type: "Record<string, string>",
+              description: "Значения опций по названию опции. Отсутствует у варианта без характеристик.",
+              optional: true,
+              expandable: false,
+              children: []
+            },
+            {
+              name: "metadata",
+              type: "Record<string, unknown>",
+              description: "Метаданные варианта. В `metadata.onec.id` лежит `Ид` характеристики, по нему плагин сопоставляет вариант, а в `metadata.onec.article` артикул из 1С.",
+              optional: true,
+              expandable: false,
+              children: []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: "properties",
+      type: "ClassifierProperty[]",
+      description: "Свойства пакета предложений. По ним плагин сводит характеристики в опции.",
+      optional: false,
+      expandable: false,
+      children: []
+    }
+  ]}
+/>
+
+Поля `allow_backorder`, `barcode`, `ean` и `weight` обмен не заполняет, но их может задать обработчик, и импорт запишет их наравне с остальными.
+
+Верните `new StepResponse({ products })`. Обработчик может менять варианты, убирать варианты из `variants` и убирать товары из порции. Обработчик не может:
+
+- вернуть товар, которого не было в порции, или один товар дважды;
+- вернуть `variants` не массивом;
+- отдать товару вариант другого товара или вернуть один вариант дважды;
+- поменять `metadata.onec.id` у существующего варианта, потому что по нему следующий обмен сопоставляет вариант. Удалить ключ `metadata` можно, тогда метаданные варианта останутся как есть.
+
+После хука плагин выводит опции товара из итоговых вариантов. Опция с тем же названием, что до хука, сохраняет связь со свойством 1С и его справочником, а значение не из справочника добавляется к нему. Опция с новым названием создаётся без связи со свойством, со значениями из вариантов. Затем плагин сравнивает варианты с `existing` и записывает набор, только если в нём что-то изменилось. Вариант, убранный из `variants`, Medusa удалит. У товара, убранного из порции, в этом обмене не меняются ни варианты, ни опции.
+
+<Note type="warning">
+
+Опцию с новым названием плагин находит по названию только внутри одной порции. В следующих порциях это название уже занято, и их товары получат отдельную опцию вместо общей. Поэтому опции лучше переименовывать в 1С, а в обработчике менять поля и значения вариантов.
+
+</Note>
 
 ---
 
@@ -197,7 +337,7 @@ importOnecPricesWorkflow.hooks.setPriceLists(async ({ priceLists }, { container 
         {
           name: "prices",
           type: "PriceListPriceToImport[]",
-          description: "Цены этого типа для вариантов порции, с полями `variant_id`, `sku`, `amount` и `currency_code`. Вариант порции, которого нет в списке, теряет цену в прайс-листе. Пустой список оставляет цены прайс-листа без изменений. Так бывает, когда 1С ничего не прислала по этому типу цен.",
+          description: "Цены этого типа для вариантов порции, с полями `variant_id`, `sku`, `amount` и `currency_code`. `sku` пустой у варианта, чей артикул занят другим вариантом. Вариант порции, которого нет в списке, теряет цену в прайс-листе. Пустой список оставляет цены прайс-листа без изменений. Так бывает, когда 1С ничего не прислала по этому типу цен.",
           optional: false,
           expandable: false,
           children: []

@@ -14,7 +14,7 @@ To open the 1C:Enterprise settings page:
 1. Open the Medusa Admin.
 2. Go to **Settings → Integrations → 1C:Enterprise**.
 
-This opens the 1C:Enterprise settings page with the integration status, the **Sync settings** and **Advanced** sections, and two sections added by the plugin, **Sales channel & region** and **Currency mapping**.
+This opens the 1C:Enterprise settings page with the integration status, the **Sync settings** and **Exchange rules** sections, and two sections added by the plugin, **Sales channel & region** and **Currency mapping**.
 
 ![1C:Enterprise settings overview](/static/1c-enterprise/en/settings-overview.webp)
 
@@ -76,26 +76,29 @@ To change or remove a mapping, open the action menu in its row and choose **Edit
 
 ---
 
-## Edit the Advanced Settings
+## Edit the Exchange Rules
 
-The **Advanced** section holds two fields:
+The **Exchange rules** section holds three fields:
 
 - **Order number prefix** – a string the plugin adds before the Medusa order number when exporting to 1C. With the `WEB-` prefix, order 1042 goes to 1C as `WEB-1042`.
 - **Action for products missing from a full catalog export** – what the plugin does with a previously imported product that's no longer in a full catalog export. You can choose **Do nothing** (the default), **Deactivate (set to draft)** or **Delete**.
+- **Update the handle when a product is renamed** – whether to rebuild an existing product's handle when its name changes in 1C. Off by default.
 
 The plugin saves the number under which an order went to 1C in the order itself. When 1C sends the order back, the plugin finds it by its `Ид` or by that number and doesn't create it again. So changing the prefix doesn't affect orders already exported.
 
 The action only runs after a full catalog export. If 1C sent only changes, the plugin doesn't treat the products absent from them as missing.
 
-To edit the advanced settings:
+The handle sets the URL of the product page on the storefront. A new product gets a handle built from its name and part of its 1C `Ид`, as described in [Record Matching](/medusa-integrations/1c-enterprise/getting-started#record-matching). While the setting is off, the plugin doesn't change an existing product's handle, and links to the product keep working. When it's on, renaming a product in 1C makes the plugin rebuild the handle from the new name, and the old link to the product stops working.
+
+To edit the exchange rules:
 
 1. Go to **Settings → Integrations → 1C:Enterprise**.
-2. In the **Advanced** section, click the action menu in the section header.
+2. In the **Exchange rules** section, click the action menu in the section header.
 3. Choose **Edit**.
-4. In the side panel that opens, set the prefix and the action for missing products.
+4. In the side panel that opens, set the prefix, the action for missing products and the handle update.
 5. Click **Save**.
 
-![Editing the advanced settings](/static/1c-enterprise/en/edit-advanced-settings.webp)
+![Editing the exchange rules](/static/1c-enterprise/en/edit-exchange-rules.webp)
 
 ---
 

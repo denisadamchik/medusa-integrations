@@ -20,6 +20,7 @@ A workflow hook is a point inside a Medusa workflow where you plug in your own f
 | Workflow | Hook | When It Runs | What It Changes |
 | --- | --- | --- | --- |
 | `importOnecProductsWorkflow` | [`setProducts`](/medusa-integrations/1c-enterprise/hooks/reference#setproducts) | on every catalog batch, up to 100 products | Medusa products from `import.xml` |
+| `importOnecVariantsWorkflow` | [`setVariants`](/medusa-integrations/1c-enterprise/hooks/reference#setvariants) | on every offers batch, up to 100 products | product variants and their options from `offers.xml` |
 | `importOnecPricesWorkflow` | [`setPriceLists`](/medusa-integrations/1c-enterprise/hooks/reference#setpricelists) | on every offers batch, up to 100 products | price lists of non-retail price types and their prices |
 | `exportOnecOrdersWorkflow` | [`setOrders`](/medusa-integrations/1c-enterprise/hooks/reference#setorders) | once per order export | the order documents that go to 1C |
 | `exportOnecOrdersWorkflow`, `exportOnecCatalogWorkflow` | [`setPayload`](/medusa-integrations/1c-enterprise/hooks/reference#setpayload) | once per export, when the XML is built | the XML of the order or catalog export |
@@ -58,9 +59,9 @@ The handler receives the batch's products and returns them in a `StepResponse`, 
 
 Every hook except `setPayload` receives an array of elements. An element brings together everything the handler needs to make a decision:
 
-- `source` – the record the result is built from. On import, it's the 1C record, and on export, the Medusa order.
+- `source` – the record the result is built from. On import, it's the 1C record, all the product's offers for `setVariants`, and on export, the Medusa order.
 - `existing` – the current Medusa record. It's passed only on import, and only for a record that already exists in Medusa.
-- The target field – what the exchange writes or sends. It's `product` for a product, `priceList` and `prices` for a price type, and `document` for an order.
+- The target field – what the exchange writes or sends. It's `product` for a product, `variants` for a product's variants, `priceList` and `prices` for a price type, and `document` for an order.
 
 The handler edits the target field and returns the elements. `setPayload` works differently. It receives the finished XML as a string and handles changes that the product or document model can't express, for example the schema version your 1C configuration expects.
 
@@ -70,8 +71,8 @@ The handler edits the target field and returns the elements. `setPayload` works 
 
 - **Return `new StepResponse({ <array> })`.** The plugin uses only the array, so you don't need to return the other input keys.
 - **Remove an element to skip that record in this exchange.** An order removed from the export doesn't get the exported mark and goes out with the next export.
-- **Delete a key from `product` or `priceList` to leave that field unchanged.** That way a value set in the Medusa Admin survives the exchange. An order `document` goes to 1C in full, and a deleted key turns into an empty node in `orders.xml`. So change values in a document instead of deleting them.
-- **Don't add elements or change matching keys.** The plugin matches a product by its 1C `Ид` before calling the hook, and 1C recognizes an order by the document's `Ид`. If a handler breaks this rule, the plugin stops the exchange with an error naming the hook.
+- **Delete a key from `product`, `priceList` or a variant in `variants` to leave that field unchanged.** That way a value set in the Medusa Admin survives the exchange. An order `document` goes to 1C in full, and a deleted key turns into an empty node in `orders.xml`. So change values in a document instead of deleting them.
+- **Don't add elements or change matching keys.** The plugin matches a product and a variant by their 1C `Ид` before calling the hook, and 1C recognizes an order by the document's `Ид`. If a handler breaks this rule, the plugin stops the exchange with an error naming the hook.
 - **Return the same result for the same input.** Otherwise, every repeated exchange rewrites the catalog again.
 
 <Note type="default" title="">
@@ -90,7 +91,7 @@ Medusa allows only one handler per hook in the whole application. If you registe
 
 ## How a Hook Affects Exchange Speed
 
-The handler runs inside a workflow step, and 1C waits for a response the whole time. `setProducts` and `setPriceLists` run on every batch, so with a 10,000-product catalog each of them runs a hundred times. The workflow engine copies the hook's input and result, along with anything you add to an element.
+The handler runs inside a workflow step, and 1C waits for a response the whole time. `setProducts`, `setVariants` and `setPriceLists` run on every batch, so with a 10,000-product catalog each of them runs a hundred times. The workflow engine copies the hook's input and result, along with anything you add to an element.
 
 Here's how three kinds of `setProducts` handler affect the exchange:
 
@@ -151,7 +152,7 @@ Start the server with `LOG_LEVEL=debug`. The plugin logs the duration of every c
 [1C Integration] import: import-onec-products › setProducts 35 ms
 ```
 
-`setPriceLists` runs inside the child workflow of the offers import, so its time is part of the overall `import-onec-offers finished in … ms` line. For exports, the plugin doesn't log step durations.
+`setVariants` and `setPriceLists` run inside the child workflows of the offers import, so their time is part of the overall `import-onec-offers finished in … ms` line. For exports, the plugin doesn't log step durations.
 
 ---
 
