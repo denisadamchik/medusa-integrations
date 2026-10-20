@@ -82,7 +82,7 @@ The **Exchange rules** section holds three fields:
 
 - **Order number prefix** – a string the plugin adds before the Medusa order number when exporting to 1C. With the `WEB-` prefix, order 1042 goes to 1C as `WEB-1042`.
 - **Action for products missing from a full catalog export** – what the plugin does with a previously imported product that's no longer in a full catalog export. You can choose **Do nothing** (the default), **Deactivate (set to draft)** or **Delete**.
-- **Update the handle when a product is renamed** – whether to rebuild an existing product's handle when its name changes in 1C. Off by default.
+- **Update the handle when a product is renamed in 1C** – whether to rebuild an existing product's handle when its name changes in 1C. Off by default.
 
 The plugin saves the number under which an order went to 1C in the order itself. When 1C sends the order back, the plugin finds it by its `Ид` or by that number and doesn't create it again. So changing the prefix doesn't affect orders already exported.
 
